@@ -1,0 +1,24 @@
+{
+  "name": "doorhandler",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Door RFID Handler that looks for an uid, notifies the user and opens the door on confirmation",
+  "engines": {
+    "node": ">= 6.9.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js"
+  },
+  "author": "robbi5 <robbi5@robbi5.de>",
+  "dependencies": {
+    "axios": "^0.16.0",
+    "body-parser": "^1.17.1",
+    "dotenv": "^4.0.0",
+    "express": "^4.15.2",
+    "ldapjs": "^1.0.2",
+    "node-json-db": "^0.7.3",
+    "promised-ldap": "^0.3.0",
+    "querystring": "^0.2.0"
+  }
+}
