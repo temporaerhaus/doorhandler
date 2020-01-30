@@ -15,10 +15,11 @@ Slack / RFID / LDAP Application for opening doors with an two-factor system.
 1. Get the code
     * Either clone this repo and run `npm install`
 1. Set the following environment variables to `.env` (see `.env.sample`):
-	* `SLACK_TEAM`: Your team, where the app is installed into
+    * `SLACK_TEAM`: Your team, where the app is installed into
     * `SLACK_TOKEN`: Your app's `xoxb-` token (available on the Install App page)
     * `SLACK_VERIFICATION_TOKEN`: Your app's Verification Token (available on the Basic Information page)
     * `PORT`: The port that you want to run the web server on
+    * `DOOR_URL`: Endpoint that is used to open doors
 1. If you're running the app locally:
     1. Start the app (`npm start`)
     1. In another windown, start ngrok on the same port as your webserver (`ngrok http $PORT`)
