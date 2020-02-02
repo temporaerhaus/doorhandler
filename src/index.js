@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+const crypto = require('crypto');
+const fs = require('fs');
+const net = require('net');
+
 const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -13,13 +17,39 @@ const recentAuthentications = new Map();
 
 const app = express();
 
-const DOOR_URL = process.env.DOOR_URL;
 const SLACK_TEAM = process.env.SLACK_TEAM;
 const SLACK_REPORT_CHANNEL = process.env.SLACK_REPORT_CHANNEL;
 const SLACK_VERIFICATION_TOKEN = process.env.SLACK_VERIFICATION_TOKEN;
+const DOOR_SECRET = Buffer.from(process.env.DOOR_SECRET, 'hex');
+const DOOR_PORT = parseInt(process.env.DOOR_PORT);
+const DOOR_HOST = process.env.DOOR_HOST;
 
 function openDoor(door) {
-  return axios.get(`${DOOR_URL}/${door}`);
+  return new Promise((resolve, reject) => {
+      const client = new net.Socket();
+      client.connect(DOOR_PORT, DOOR_HOST, () => {
+          let buffer = Buffer.alloc(0);
+          client.on('data', (data) => {
+              buffer = Buffer.concat([buffer, data]);
+              if (buffer.length === 4) {
+                  const response = Buffer.alloc(5);
+                  response.writeUInt8(door);
+                  buffer.copy(response, 1, 0, 4);
+                  const hmac = crypto.createHmac('sha256', DOOR_SECRET);
+                  hmac.update(response);
+                  const payload = Buffer.concat([response, hmac.digest()]);
+                  client.write(payload);
+              }
+          });
+          client.on('close', () => {
+              if (buffer.readUInt8(buffer.length - 1) === 0) {
+                  resolve();
+              } else {
+                  reject();
+              }
+          });
+      });
+  });
 }
 
 // parse application/x-www-form-urlencoded && application/json
@@ -62,8 +92,9 @@ app.get('/open', (req, res) => {
 
   if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) < (Date.now() + 60000)) {
     // skip second factor
-    openDoor(door);
-    res.status(200).send({ ok: true });
+    openDoor(door)
+      .then(() => res.status(200).send({ ok: true }))
+      .catch(() => res.status(500).send({ ok: false }));
   } else {
     // use slack as second factor
     message.sendOpen(SLACK_TEAM, slackUid, door);
