@@ -109,7 +109,7 @@ app.post('/interactive-message', (req, res) => {
   }
 
   if (actionType === 'report') {
-    message.sendReport(SLACK_TEAM, SLACK_REPORT_CHANNEL, slackUid, door);
+    message.sendReport(SLACK_TEAM, SLACK_REPORT_CHANNEL, user, door);
     res.send({ text: `Der Öffnungsversuch wurde verhindert und gemeldet` });
     return;
   }
