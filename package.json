@@ -19,6 +19,7 @@
     "ldapjs": "^1.0.2",
     "node-json-db": "^0.7.3",
     "promised-ldap": "^0.3.0",
-    "querystring": "^0.2.0"
+    "querystring": "^0.2.0",
+    "yaml": "^1.7.2"
   }
 }

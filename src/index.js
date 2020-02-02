@@ -3,9 +3,12 @@ require('dotenv').config();
 const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
+const YAML = require('yaml');
 const message = require('./message');
 
-const accessControlList = require('../acl.json');
+const file = fs.readFileSync('./config.yml', 'utf8');
+const cfg = YAML.parse(file);
+const accessControlList = cfg.acl;
 const recentAuthentications = new Map();
 
 const app = express();
@@ -48,12 +51,14 @@ app.get('/open', (req, res) => {
     return;
   }
   
-  if (!accessControlList.hasOwnProperty(rfiduid)) {
+  const aclEntry = accessControlList.find((v) => v.rfiduid === rfiduid);
+
+  if (!aclEntry) {
     res.status(401).send({ err: 'no user' });
     return;
   }
 
-  const slackUid = accessControlList[rfiduid];
+  const slackUid = aclEntry.slackuid;
 
   if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) < (Date.now() + 60000)) {
     // skip second factor
