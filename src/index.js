@@ -24,6 +24,9 @@ const DOOR_SECRET = Buffer.from(process.env.DOOR_SECRET, 'hex');
 const DOOR_PORT = parseInt(process.env.DOOR_PORT);
 const DOOR_HOST = process.env.DOOR_HOST;
 
+const TIME_2FA_NO_REAUTH_NEEDED = 60000;
+const TIME_2FA_EXPIRING = 120000;
+
 function openDoor(door) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -98,7 +101,7 @@ app.get('/open', (req, res) => {
 
   const slackUid = aclEntry.slackuid;
 
-  if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) < (Date.now() + 60000)) {
+  if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) < (Date.now() + TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
     openDoor(door)
       .then(() => res.status(200).send({ ok: true }))
@@ -147,6 +150,10 @@ app.post('/interactive-message', (req, res) => {
   }
 
   if (actionType === 'open') {
+    if (data.time < Date.now() - TIME_2FA_EXPIRING) {
+      res.send({ text: `Sorry. Die Zeit für diesen Öffnungsversuch ist bereits abgelaufen. Bitte versuche es erneut` });
+      return;
+    }
     recentAuthentications.set(user, Date.now());
       .then(() => res.send({ text: `:white_check_mark: Du hast die Tür *${data.door}* geöffnet` }))
       .catch(() => res.send({ text: `Die Tür *${data.door}* konnte nicht geöffnet werden, versuch es doch später noch einmal` }));
