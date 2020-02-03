@@ -7,6 +7,7 @@ const net = require('net');
 const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
+const rateLimit = require('express-rate-limit');
 const YAML = require('yaml');
 const message = require('./message');
 
@@ -74,6 +75,9 @@ async function expireMessage(slackUid, door) {
     await message.replaceOpenTimeout(slackUid, door, msg);
   }
 }
+
+// limit app to 10 requests per second
+app.use(rateLimit({ windowMs: 1000, max: 10 });
 
 // parse application/x-www-form-urlencoded && application/json
 app.use(bodyParser.urlencoded({ extended: true }));
