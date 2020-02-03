@@ -25,30 +25,33 @@ const DOOR_PORT = parseInt(process.env.DOOR_PORT);
 const DOOR_HOST = process.env.DOOR_HOST;
 
 function openDoor(door) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    try {
       const client = new net.Socket();
-      client.connect(DOOR_PORT, DOOR_HOST, () => {
-          let buffer = Buffer.alloc(0);
-          client.on('data', (data) => {
-              buffer = Buffer.concat([buffer, data]);
-              if (buffer.length === 4) {
-                  const response = Buffer.alloc(5);
-                  response.writeUInt8(door);
-                  buffer.copy(response, 1, 0, 4);
-                  const hmac = crypto.createHmac('sha256', DOOR_SECRET);
-                  hmac.update(response);
-                  const payload = Buffer.concat([response, hmac.digest()]);
-                  client.write(payload);
-              }
-          });
-          client.on('close', () => {
-              if (buffer.readUInt8(buffer.length - 1) === 0) {
-                  resolve();
-              } else {
-                  reject();
-              }
-          });
+      await client.connect(DOOR_PORT, DOOR_HOST);
+      let buffer = Buffer.alloc(0);
+      client.on('data', (data) => {
+        buffer = Buffer.concat([buffer, data]);
+        if (buffer.length === 4) {
+          const response = Buffer.alloc(5);
+          response.writeUInt8(door);
+          buffer.copy(response, 1, 0, 4);
+          const hmac = crypto.createHmac('sha256', DOOR_SECRET);
+          hmac.update(response);
+          const payload = Buffer.concat([response, hmac.digest()]);
+          client.write(payload);
+        }
       });
+      client.on('close', () => {
+        if (buffer.readUInt8(buffer.length - 1) === 0) {
+            resolve();
+        } else {
+            reject();
+        }
+      });
+    } catch (e) {
+      reject(e);
+    }
   });
 }
 
