@@ -174,11 +174,11 @@ app.post('/interactive-message', (req, res) => {
     recentAuthentications.set(user, Date.now());
     openDoor(door.id)
       .then(() => {
-        lastMessages.set(slackUid, null);
+        lastMessages.set(user, null);
         res.send({ text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet` });
       })
       .catch(() => {
-        lastMessages.set(slackUid, null);
+        lastMessages.set(user, null);
         res.send({ text: `Die Tür *${door.name}* konnte nicht geöffnet werden, versuch es doch später noch einmal` });
       });
     return;
