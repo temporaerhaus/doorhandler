@@ -120,12 +120,8 @@ app.get('/open', async (req, res) => {
 
   if (recentAuthentications.has(slackUid) && recentAuthentications.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
-    openDoor(door.id)
-      .then(() => {
-        message.sendConfirmation(user.id, door);
-        res.status(200).send({ ok: true });
-      })
-      .catch(() => res.status(500).send({ ok: false }));
+    res.status(200).send({ ok: true });
+    openDoor(door.id).then(() => message.sendConfirmation(user.id, door));
   } else {
     // use slack as second factor
     await expireMessage(slackUid, door);
