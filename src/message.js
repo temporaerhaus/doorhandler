@@ -58,7 +58,7 @@ const sendConfirmation = async (userId, door) => {
   let message = {
     channel: userId,
     as_user: true,
-    text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet`
+    text: `:white_check_mark: Du hast die Tür *${door.name}* direkt geöffnet`
   };
   // send the message as a DM to the user
   let sendMessage = await axios.post('https://slack.com/api/chat.postMessage', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
