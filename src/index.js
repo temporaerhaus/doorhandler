@@ -14,6 +14,7 @@ const file = fs.readFileSync('./config.yml', 'utf8');
 const cfg = YAML.parse(file);
 const accessControlList = cfg.acl;
 const recentAuthentications = new Map();
+const lastMessages = new Map();
 
 const app = express();
 
@@ -25,7 +26,7 @@ const DOOR_PORT = parseInt(process.env.DOOR_PORT);
 const DOOR_HOST = process.env.DOOR_HOST;
 
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
-const TIME_2FA_EXPIRING = 120000;
+const TIME_2FA_EXPIRING = 5000;
 
 function openDoor(door) {
   return new Promise(async (resolve, reject) => {
@@ -58,6 +59,17 @@ function openDoor(door) {
   });
 }
 
+async function expireMessage(slackUid, door) {
+  if (!lastMessages.has(slackUid)) {
+    return
+  }
+  let msg = lastMessages.get(slackUid);
+  console.log('expiring message for user', slackUid, msg);
+  if (msg !== null) {
+    await message.replaceOpenTimeout(slackUid, door, msg);
+  }
+}
+
 // parse application/x-www-form-urlencoded && application/json
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -71,7 +83,7 @@ app.get('/', (req, res) => {
 /**
  * Endpoint for the door devices
  */
-app.get('/open', (req, res) => {
+app.get('/open', async (req, res) => {
   let { token, door, rfiduid } = req.query;
 
   if (typeof token === 'undefined' || typeof door === 'undefined' || typeof rfiduid === 'undefined') {
@@ -108,7 +120,12 @@ app.get('/open', (req, res) => {
       .catch(() => res.status(500).send({ ok: false }));
   } else {
     // use slack as second factor
-    message.sendOpen(SLACK_TEAM, slackUid, door);
+    await expireMessage(slackUid, door);
+
+    let msg = await message.sendOpen(slackUid, door);
+    lastMessages.set(slackUid, msg);
+    //setTimeout(() => expireMessage(slackUid, door), TIME_2FA_EXPIRING);
+
     res.status(200).send({ ok: true });
   }
 });
@@ -155,14 +172,21 @@ app.post('/interactive-message', (req, res) => {
       return;
     }
     recentAuthentications.set(user, Date.now());
-      .then(() => res.send({ text: `:white_check_mark: Du hast die Tür *${data.door}* geöffnet` }))
-      .catch(() => res.send({ text: `Die Tür *${data.door}* konnte nicht geöffnet werden, versuch es doch später noch einmal` }));
     openDoor(door.id)
+      .then(() => {
+        lastMessages.set(slackUid, null);
+        res.send({ text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet` });
+      })
+      .catch(() => {
+        lastMessages.set(slackUid, null);
+        res.send({ text: `Die Tür *${door.name}* konnte nicht geöffnet werden, versuch es doch später noch einmal` });
+      });
     return;
   }
 
   if (actionType === 'report') {
-    message.sendReport(SLACK_TEAM, SLACK_REPORT_CHANNEL, user, door);
+    message.sendReport(SLACK_REPORT_CHANNEL, user, door);
+    lastMessages.set(slackUid, null);
     res.send({ text: `Der Öffnungsversuch wurde verhindert und gemeldet` });
     return;
   }

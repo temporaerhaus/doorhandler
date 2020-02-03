@@ -13,14 +13,14 @@ const craftId = (doorId, userId, time) => {
   return x + ':' + sha1(`${x}:${SECRET}`);
 }
 
-const sendOpen = (teamId, userId, door) => {
+const sendOpen = async (userId, door) => {
   let now = (+new Date());
   let callback_id = craftId(door.id, userId, now);
   let message = {
     channel: userId,
     as_user: true,
-    token: SLACK_TOKEN,
-    attachments: JSON.stringify([
+    text: "",
+    attachments: [
       {
         text: `<@${userId}> Dein RFID-Tag wurde an der Tür *${door.name}* erkannt`,
         callback_id: callback_id,
@@ -40,16 +40,49 @@ const sendOpen = (teamId, userId, door) => {
             style: 'danger',
           }
         ],
-      }]),
+      }],
   };
-
 	// send the message as a DM to the user
-	const params = qs.stringify(message);
-	const sendMessage = axios.post('https://slack.com/api/chat.postMessage', params);
-	sendMessage.then(postResult);
+  let sendMessage = await axios.post('https://slack.com/api/chat.postMessage', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
+  postResult(sendMessage);
+  return {
+    callback_id: callback_id,
+    channel: sendMessage.data.channel,
+    ts: sendMessage.data.ts
+  };
 };
 
-const sendReport = (teamId, reportChannelId, userId, door) => {
+const replaceOpenTimeout = async (userId, door, msg) => {
+  let message = {
+    channel: msg.channel,
+    as_user: true,
+    ts: msg.ts,
+    text: "",
+    attachments: [
+      {
+        text: `<@${userId}> Dein RFID-Tag wurde an der Tür *${door.name}* erkannt.\nDie Zeit für die Öffnung ist bereits abgelaufen.`,
+        callback_id: msg.callback_id,
+        actions: [
+          {
+            name: 'report',
+            text: 'Das war ich nicht!',
+            type: 'button',
+            value: 'report',
+            style: 'danger',
+          }
+        ],
+      }],
+  };
+  let sendMessage = await axios.post('https://slack.com/api/chat.update', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
+  postResult(sendMessage);
+  return {
+    callback_id: msg.callback_id,
+    channel: sendMessage.data.channel,
+    ts: sendMessage.data.ts
+  };
+};
+
+const sendReport = (reportChannelId, userId, door) => {
   const message = {
     channel: reportChannelId,
     token: SLACK_TOKEN,
@@ -57,8 +90,7 @@ const sendReport = (teamId, reportChannelId, userId, door) => {
   };
 
   // send the message to the report channel
-  const params = qs.stringify(message);
-  const sendMessage = axios.post('https://slack.com/api/chat.postMessage', params);
+  const sendMessage = axios.post('https://slack.com/api/chat.postMessage', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
   sendMessage.then(postResult);
 };
 
@@ -85,4 +117,4 @@ const extractAndVerify = (callback_id) => {
   return extract(callback_id);
 };
 
-module.exports = { sendOpen, verify, extractAndVerify };
+module.exports = { sendOpen, verify, extractAndVerify, replaceOpenTimeout };
