@@ -53,7 +53,12 @@ function openDoor(door) {
             reject();
         }
       });
+      client.on('error', (e) => {
+        console.log(e);
+        reject(e);
+      });
     } catch (e) {
+      console.error(e);
       reject(e);
     }
   });
