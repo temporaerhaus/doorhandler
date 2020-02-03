@@ -26,7 +26,7 @@ const DOOR_PORT = parseInt(process.env.DOOR_PORT);
 const DOOR_HOST = process.env.DOOR_HOST;
 
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
-const TIME_2FA_EXPIRING = 5000;
+const TIME_2FA_EXPIRING = 120000;
 
 function openDoor(door) {
   return new Promise(async (resolve, reject) => {
