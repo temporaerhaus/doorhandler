@@ -76,8 +76,9 @@ app.get('/open', (req, res) => {
     return;
   }
 
-  let doorcfg = cfg.door.find((v) => v.id == door);
-  if (!doorcfg || doorcfg.token !== token) {
+  doorId = parseInt(door);
+  door = cfg.door.find((v) => v.id == doorId);
+  if (!door || door.token !== token) {
     res.status(401).send({ err: 'no door' });
     return;
   }
@@ -138,11 +139,18 @@ app.post('/interactive-message', (req, res) => {
     return;
   }
 
+  let doorId = parseInt(data.doorId);
+  const door = cfg.door.find((v) => v.id == doorId);
+  if (!door) {
+    res.status(401).send({ err: 'door unknown' });
+    return;
+  }
+
   if (actionType === 'open') {
     recentAuthentications.set(user, Date.now());
-    openDoor(data.door)
       .then(() => res.send({ text: `:white_check_mark: Du hast die Tür *${data.door}* geöffnet` }))
       .catch(() => res.send({ text: `Die Tür *${data.door}* konnte nicht geöffnet werden, versuch es doch später noch einmal` }));
+    openDoor(door.id)
     return;
   }
 

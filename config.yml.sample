@@ -1,11 +1,10 @@
-config:
-  door:
-    - id: 0
-      name: "door 0"
-      token: "HELLOWORLD-ABCD"
-    - id: 1
-      name: "door 1"
-      token: "HELLOWORLD-EFGH"
+door:
+  - id: 0
+    name: "door 0"
+    token: "HELLOWORLD-ABCD"
+  - id: 1
+    name: "door 1"
+    token: "HELLOWORLD-EFGH"
 acl:
   - rfiduid: "42abcd01"
     slackuid: "AABBCCDDE"
