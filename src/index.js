@@ -115,7 +115,7 @@ app.get('/open', async (req, res) => {
 
   if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
-    openDoor(door)
+    openDoor(door.id)
       .then(() => res.status(200).send({ ok: true }))
       .catch(() => res.status(500).send({ ok: false }));
   } else {
@@ -171,22 +171,22 @@ app.post('/interactive-message', (req, res) => {
       res.send({ text: `Sorry. Die Zeit für diesen Öffnungsversuch ist bereits abgelaufen. Bitte versuche es erneut` });
       return;
     }
-    recentAuthentications.set(user, Date.now());
+    recentAuthentications.set(user.id, Date.now());
     openDoor(door.id)
       .then(() => {
-        lastMessages.set(user, null);
+        lastMessages.set(user.id, null);
         res.send({ text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet` });
       })
       .catch(() => {
-        lastMessages.set(user, null);
+        lastMessages.set(user.id, null);
         res.send({ text: `Die Tür *${door.name}* konnte nicht geöffnet werden, versuch es doch später noch einmal` });
       });
     return;
   }
 
   if (actionType === 'report') {
-    message.sendReport(SLACK_REPORT_CHANNEL, user, door);
-    lastMessages.set(slackUid, null);
+    message.sendReport(SLACK_REPORT_CHANNEL, user.id, door);
+    lastMessages.set(user.id, null);
     res.send({ text: `Der Öffnungsversuch wurde verhindert und gemeldet` });
     return;
   }
