@@ -135,4 +135,4 @@ const extractAndVerify = (callback_id) => {
   return extract(callback_id);
 };
 
-module.exports = { sendOpen, verify, extractAndVerify, replaceOpenTimeout };
+module.exports = { sendOpen, verify, extractAndVerify, replaceOpenTimeout, sendConfirmation };
