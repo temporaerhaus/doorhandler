@@ -104,7 +104,7 @@ app.get('/open', async (req, res) => {
     return;
   }
   
-  const aclEntry = accessControlList.find((v) => v.rfiduid === rfiduid);
+  const aclEntry = accessControlList.find((v) => v.rfiduid.toLowerCase() === rfiduid);
 
   if (!aclEntry) {
     res.status(401).send({ err: 'no user' });
