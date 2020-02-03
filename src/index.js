@@ -15,6 +15,7 @@ const file = fs.readFileSync('./config.yml', 'utf8');
 const cfg = YAML.parse(file);
 const accessControlList = cfg.acl;
 const recentAuthentications = new Map();
+const recentAttempts = new Map();
 const lastMessages = new Map();
 
 const app = express();
@@ -26,6 +27,7 @@ const DOOR_SECRET = Buffer.from(process.env.DOOR_SECRET, 'hex');
 const DOOR_PORT = parseInt(process.env.DOOR_PORT);
 const DOOR_HOST = process.env.DOOR_HOST;
 
+const TIME_BETWEEN_UID_ATTEMPTS = 10000;
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
 const TIME_2FA_EXPIRING = 120000;
 
@@ -77,7 +79,7 @@ async function expireMessage(slackUid, door) {
 }
 
 // limit app to 10 requests per second
-app.use(rateLimit({ windowMs: 1000, max: 10 });
+app.use(rateLimit({ windowMs: 1000, max: 10 }));
 
 // parse application/x-www-form-urlencoded && application/json
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -112,7 +114,13 @@ app.get('/open', async (req, res) => {
     res.status(400).send({ err: 'no uid' });
     return;
   }
+
+  if (recentAttempts.has(rfiduid) && recentAttempts.get(rfiduid) > (Date.now() - TIME_BETWEEN_UID_ATTEMPTS)) {
+    res.status(400).send({ err: 'attempt too soon' });
+    return;
+  }
   
+  recentAttempts.set(rfiduid, Date.now());
   const aclEntry = accessControlList.find((v) => v.rfiduid.toLowerCase() === rfiduid);
 
   if (!aclEntry) {
