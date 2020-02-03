@@ -73,7 +73,11 @@ app.get('/open', (req, res) => {
     return;
   }
 
-  // FIXME: Check Token,Door-Combination
+  let doorcfg = cfg.door.find((v) => v.id == door);
+  if (!doorcfg || doorcfg.token !== token) {
+    res.status(401).send({ err: 'no door' });
+    return;
+  }
 
   rfiduid = rfiduid.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (rfiduid.length === 0) {
