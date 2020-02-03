@@ -201,7 +201,7 @@ app.post('/interactive-message', (req, res) => {
   }
 
   if (actionType === 'report') {
-    message.sendReport(SLACK_REPORT_CHANNEL, user.id, door);
+    message.sendReport(SLACK_REPORT_CHANNEL, user.id, door, data.time);
     lastMessages.set(user.id, null);
     res.send({ text: `Der Öffnungsversuch wurde verhindert und gemeldet` });
     return;

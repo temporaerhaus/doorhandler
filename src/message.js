@@ -100,11 +100,11 @@ const replaceOpenTimeout = async (userId, door, msg) => {
   };
 };
 
-const sendReport = (reportChannelId, userId, door) => {
+const sendReport = (reportChannelId, userId, door, time) => {
   const message = {
     channel: reportChannelId,
     token: SLACK_TOKEN,
-    text: `<@${userId}> meldet, dass ein Tür-Öffnungsversuch an der Tür *${door.name}* unberechtigt ausgelöst wurde`
+    text: `<@${userId}> meldet, dass ein Tür-Öffnungsversuch an der Tür *${door.name}* (${time}) unberechtigt ausgelöst wurde`
   };
 
   // send the message to the report channel
