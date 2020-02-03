@@ -32,10 +32,10 @@ const TIME_2FA_NO_REAUTH_NEEDED = 60000;
 const TIME_2FA_EXPIRING = 120000;
 
 function openDoor(door) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const client = new net.Socket();
-      await client.connect(DOOR_PORT, DOOR_HOST);
+  try {
+    const client = new net.Socket();
+    client.connect(DOOR_PORT, DOOR_HOST);
+    return new Promise((resolve, reject) => {
       let buffer = Buffer.alloc(0);
       client.on('data', (data) => {
         buffer = Buffer.concat([buffer, data]);
@@ -60,11 +60,11 @@ function openDoor(door) {
         console.log(e);
         reject(e);
       });
-    } catch (e) {
-      console.error(e);
-      reject(e);
-    }
-  });
+    });
+  } catch(e) {
+    console.error(e);
+    return Promise.reject(e);
+  }
 }
 
 async function expireMessage(slackUid, door) {
@@ -133,7 +133,7 @@ app.get('/open', async (req, res) => {
   if (recentAuthentications.has(slackUid) && recentAuthentications.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
     res.status(200).send({ ok: true });
-    openDoor(door.id).then(() => message.sendConfirmation(slackUid, door));
+    openDoor(door.id).then(() => message.sendConfirmation(slackUid, door)).catch(() => console.error);
   } else {
     // use slack as second factor
     await expireMessage(slackUid, door);
