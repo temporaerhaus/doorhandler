@@ -52,6 +52,24 @@ const sendOpen = async (userId, door) => {
   };
 };
 
+const sendConfirmation = async (userId, door) => {
+  let now = (+new Date());
+  let callback_id = craftId(door.id, userId, now);
+  let message = {
+    channel: userId,
+    as_user: true,
+    text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet`
+  };
+  // send the message as a DM to the user
+  let sendMessage = await axios.post('https://slack.com/api/chat.postMessage', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
+  postResult(sendMessage);
+  return {
+    callback_id: callback_id,
+    channel: sendMessage.data.channel,
+    ts: sendMessage.data.ts
+  };
+};
+
 const replaceOpenTimeout = async (userId, door, msg) => {
   let message = {
     channel: msg.channel,
