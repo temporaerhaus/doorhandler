@@ -113,7 +113,7 @@ app.get('/open', async (req, res) => {
 
   const slackUid = aclEntry.slackuid;
 
-  if (recentAuthentications.has(slackUid) && recentAuthentication.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
+  if (recentAuthentications.has(slackUid) && recentAuthentications.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
     openDoor(door.id)
       .then(() => res.status(200).send({ ok: true }))
