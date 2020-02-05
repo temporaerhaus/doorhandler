@@ -50,7 +50,7 @@ function openDoor(door) {
         }
       });
       client.on('close', () => {
-        if (buffer.readUInt8(buffer.length - 1) === 0) {
+        if (buffer.length > 0 && buffer.readUInt8(buffer.length - 1) === 0) {
             resolve();
         } else {
             reject();
