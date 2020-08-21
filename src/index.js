@@ -30,6 +30,7 @@ const DOOR_HOST = process.env.DOOR_HOST;
 const TIME_BETWEEN_UID_ATTEMPTS = 10000;
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
 const TIME_2FA_EXPIRING = 120000;
+const TIMEOUT_OPENER_HEALTHY = 120000;
 
 function openDoor(door) {
   try {
@@ -146,7 +147,6 @@ app.get('/open', async (req, res) => {
   }
 });
 
-
 /*
  * Endpoint to receive events from interactive message on Slack. Checks the
  * verification token before continuing.
@@ -207,6 +207,24 @@ app.post('/interactive-message', (req, res) => {
     return;
   }
 });
+
+/**
+ * Endpoint for assessing the health status of the opener device
+ */
+let lastOpenerContact = Date.now();
+app.get('/opener-alive', (req, res) => {
+    lastOpenerContact = Date.now()
+    res.status(200).send({ ok: true });
+});
+setInterval(() => {
+    const lastContact = Date.now() - lastOpenerContact;
+    if (lastContact > TIMEOUT_OPENER_HEALTHY) {
+        message.sendMessage(
+            SLACK_REPORT_CHANNEL,
+            `Opener hat sich seit ${Math.floor(lastContact/1000)}s nicht mehr gemeldet.`
+        );
+    }
+}, TIMEOUT_OPENER_HEALTHY);
 
 app.listen(process.env.PORT, () => {
   console.log(`App listening on port ${process.env.PORT}!`);

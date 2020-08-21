@@ -112,6 +112,18 @@ const sendReport = (reportChannelId, userId, door, time) => {
   sendMessage.then(postResult);
 };
 
+const sendMessage = (reportChannelId, content) => {
+  const message = {
+    channel: reportChannelId,
+    token: SLACK_TOKEN,
+    text: content
+  };
+
+  // send the message to the report channel
+  const sendMessage = axios.post('https://slack.com/api/chat.postMessage', message, { headers: { 'Authorization': `Bearer ${SLACK_TOKEN}` }});
+  sendMessage.then(postResult);
+};
+
 const verify = (callback_id) => {
   let cb = extract(callback_id);
   if (cb === false) {
@@ -135,4 +147,4 @@ const extractAndVerify = (callback_id) => {
   return extract(callback_id);
 };
 
-module.exports = { sendOpen, verify, extractAndVerify, replaceOpenTimeout, sendConfirmation };
+module.exports = { sendOpen, verify, extractAndVerify, replaceOpenTimeout, sendConfirmation, sendMessage };
