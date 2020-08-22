@@ -105,16 +105,16 @@ slackApp.get('/', (req, res) => {
  * Endpoint for the door devices
  */
 app.get('/open', async (req, res) => {
-  let { token, door, rfiduid } = req.query;
+  let { door, rfiduid } = req.query;
 
-  if (typeof token === 'undefined' || typeof door === 'undefined' || typeof rfiduid === 'undefined') {
+  if (typeof door === 'undefined' || typeof rfiduid === 'undefined') {
     res.sendStatus(400);
     return;
   }
 
-  doorId = parseInt(door);
+  doorId = door;
   door = cfg.door.find((v) => v.id == doorId);
-  if (!door || door.token !== token) {
+  if (!door) {
     res.status(401).send({ err: 'no door' });
     return;
   }
@@ -143,7 +143,7 @@ app.get('/open', async (req, res) => {
   if (recentAuthentications.has(slackUid) && recentAuthentications.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
     res.status(200).send({ ok: true });
-    openDoor(door.id).then(() => message.sendConfirmation(slackUid, door)).catch(() => console.error);
+    openDoor(door.relais).then(() => message.sendConfirmation(slackUid, door)).catch(() => console.error);
   } else {
     // use slack as second factor
     await expireMessage(slackUid, door);
@@ -184,8 +184,7 @@ slackApp.post('/interactive-message', (req, res) => {
     return;
   }
 
-  let doorId = parseInt(data.doorId);
-  const door = cfg.door.find((v) => v.id == doorId);
+  const door = cfg.door.find((v) => v.id == data.doorId);
   if (!door) {
     res.status(401).send({ err: 'door unknown' });
     return;
@@ -197,7 +196,7 @@ slackApp.post('/interactive-message', (req, res) => {
       return;
     }
     recentAuthentications.set(user.id, Date.now());
-    openDoor(door.id)
+    openDoor(door.relais)
       .then(() => {
         lastMessages.set(user.id, null);
         res.send({ text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet` });

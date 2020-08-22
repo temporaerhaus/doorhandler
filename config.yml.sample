@@ -1,10 +1,10 @@
 door:
-  - id: 0
+  - id: door0
     name: "door 0"
-    token: "HELLOWORLD-ABCD"
-  - id: 1
+    relais: 0
+  - id: door1
     name: "door 1"
-    token: "HELLOWORLD-EFGH"
+    relais: 1
 acl:
   - rfiduid: "42abcd01"
     slackuid: "AABBCCDDE"
