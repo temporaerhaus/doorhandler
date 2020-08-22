@@ -19,6 +19,7 @@ const recentAttempts = new Map();
 const lastMessages = new Map();
 
 const app = express();
+const slackApp = express();
 
 const SLACK_TEAM = process.env.SLACK_TEAM;
 const SLACK_REPORT_CHANNEL = process.env.SLACK_REPORT_CHANNEL;
@@ -81,13 +82,21 @@ async function expireMessage(slackUid, door) {
 
 // limit app to 10 requests per second
 app.use(rateLimit({ windowMs: 1000, max: 10 }));
+slackApp.use(rateLimit({ windowMs: 1000, max: 10 }));
 
 // parse application/x-www-form-urlencoded && application/json
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+slackApp.use(bodyParser.urlencoded({ extended: true }));
+slackApp.use(bodyParser.json());
 
 app.get('/', (req, res) => {
-  res.send('<h2>The Door Handler is running</h2>' +
+  res.send('<h2>The Door Handler (internal) is running</h2>' +
+    '<p>Follow the instructions in the README to configure ' +
+    'the readers, users and your environment variables.</p>');
+});
+slackApp.get('/', (req, res) => {
+  res.send('<h2>The Door Handler (external) is running</h2>' +
     '<p>Follow the instructions in the README to configure ' +
     'the Slack App and your environment variables.</p>');
 });
@@ -151,7 +160,7 @@ app.get('/open', async (req, res) => {
  * Endpoint to receive events from interactive message on Slack. Checks the
  * verification token before continuing.
  */
-app.post('/interactive-message', (req, res) => {
+slackApp.post('/interactive-message', (req, res) => {
   const { token, user, team, callback_id, actions } = JSON.parse(req.body.payload);
   if (token !== SLACK_VERIFICATION_TOKEN) {
     res.status(403).send({ err: 'slack verification failed' });
@@ -226,6 +235,9 @@ setInterval(() => {
     }
 }, TIMEOUT_OPENER_HEALTHY);
 
-app.listen(process.env.PORT, () => {
+app.listen(process.env.PORT, process.env.INTERNAL_HOST, () => {
   console.log(`App listening on port ${process.env.PORT}!`);
+});
+slackApp.listen(process.env.PORT, process.env.EXTERNAL_HOST, () => {
+  console.log(`slackApp listening on port ${process.env.PORT}!`);
 });
