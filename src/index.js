@@ -235,8 +235,8 @@ setInterval(() => {
 }, TIMEOUT_OPENER_HEALTHY);
 
 app.listen(process.env.PORT, process.env.INTERNAL_HOST, () => {
-  console.log(`App listening on port ${process.env.PORT}!`);
+  console.log(`App listening on http://${process.env.INTERNAL_HOST}:${process.env.PORT}`);
 });
 slackApp.listen(process.env.PORT, process.env.EXTERNAL_HOST, () => {
-  console.log(`slackApp listening on port ${process.env.PORT}!`);
+  console.log(`slackApp listening on http://${process.env.EXTERNAL_HOST}:${process.env.PORT}`);
 });
