@@ -219,9 +219,9 @@ slackApp.post('/interactive-message', (req, res) => {
 /**
  * Endpoint for assessing the health status of the opener device
  */
-let lastOpenerContact = Date.now();
+var lastOpenerContact = Date.now();
 app.get('/opener-alive', (req, res) => {
-    lastOpenerContact = Date.now()
+    lastOpenerContact = Date.now();
     res.status(200).send({ ok: true });
 });
 setInterval(() => {
