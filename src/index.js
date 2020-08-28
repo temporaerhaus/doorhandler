@@ -32,6 +32,7 @@ const TIME_BETWEEN_UID_ATTEMPTS = 10000;
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
 const TIME_2FA_EXPIRING = 120000;
 const TIMEOUT_OPENER_HEALTHY = 120000;
+const TIMEOUT_UNHEALTHY_REMINDER = 4 * 60 * 60 * 1000;
 
 function openDoor(door) {
   try {
@@ -219,18 +220,29 @@ slackApp.post('/interactive-message', (req, res) => {
 /**
  * Endpoint for assessing the health status of the opener device
  */
-var lastOpenerContact = Date.now();
+let lastOpenerContact = Date.now();
+let lastUnhealthyMessage = 0;
 app.get('/opener-alive', (req, res) => {
     lastOpenerContact = Date.now();
     res.status(200).send({ ok: true });
+    if (lastUnhealthyMessage > 0) {
+        message.sendMessage(
+            SLACK_REPORT_CHANNEL,
+            'Opener ist wieder da! :tada:'
+        );
+        lastUnhealthyMessage = 0;
+    }
 });
 setInterval(() => {
     const lastContact = Date.now() - lastOpenerContact;
-    if (lastContact > TIMEOUT_OPENER_HEALTHY) {
+    const lastMessage = Date.now() - lastUnhealthyMessage;
+    if (lastUnhealthyMessage === 0 && lastContact > TIMEOUT_OPENER_HEALTHY &&
+        || lastUnhealthyMessage > 0 && lastMessage > TIMEOUT_UNHEALTHY_REMINDER) {
         message.sendMessage(
             SLACK_REPORT_CHANNEL,
             `Opener hat sich seit ${Math.floor(lastContact/1000)}s nicht mehr gemeldet.`
         );
+        lastUnhealthyMessage = Date.now();
     }
 }, TIMEOUT_OPENER_HEALTHY);
 
