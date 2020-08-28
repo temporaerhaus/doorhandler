@@ -236,7 +236,7 @@ app.get('/opener-alive', (req, res) => {
 setInterval(() => {
     const lastContact = Date.now() - lastOpenerContact;
     const lastMessage = Date.now() - lastUnhealthyMessage;
-    if (lastUnhealthyMessage === 0 && lastContact > TIMEOUT_OPENER_HEALTHY &&
+    if (lastUnhealthyMessage === 0 && lastContact > TIMEOUT_OPENER_HEALTHY
         || lastUnhealthyMessage > 0 && lastMessage > TIMEOUT_UNHEALTHY_REMINDER) {
         message.sendMessage(
             SLACK_REPORT_CHANNEL,
