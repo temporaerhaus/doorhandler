@@ -1,6 +1,6 @@
 # VSH Door Handler
 
-Slack / RFID / LDAP Application for opening doors with an two-factor system.
+Slack / RFID Application for opening doors with an two-factor system.
 
 ## Setup
 
@@ -20,9 +20,10 @@ Slack / RFID / LDAP Application for opening doors with an two-factor system.
     * `SLACK_VERIFICATION_TOKEN`: Your app's Verification Token (available on the Basic Information page)
     * `PORT`: The port that you want to run the web server on
     * `DOOR_URL`: Endpoint that is used to open doors
+1. Fill the configuration `config.yml` (see `config.yml.sample`)
 1. If you're running the app locally:
     1. Start the app (`npm start`)
-    1. In another windown, start ngrok on the same port as your webserver (`ngrok http $PORT`)
+    1. In another window, start ngrok on the same port as your webserver (`ngrok http $PORT`)
 
 
 #### Enable Interactive Messages
