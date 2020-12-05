@@ -24,9 +24,6 @@ const slackApp = express();
 const SLACK_TEAM = process.env.SLACK_TEAM;
 const SLACK_REPORT_CHANNEL = process.env.SLACK_REPORT_CHANNEL;
 const SLACK_VERIFICATION_TOKEN = process.env.SLACK_VERIFICATION_TOKEN;
-const DOOR_SECRET = Buffer.from(process.env.DOOR_SECRET, 'hex');
-const DOOR_PORT = parseInt(process.env.DOOR_PORT);
-const DOOR_HOST = process.env.DOOR_HOST;
 
 const TIME_BETWEEN_UID_ATTEMPTS = 10000;
 const TIME_2FA_NO_REAUTH_NEEDED = 60000;
@@ -34,10 +31,11 @@ const TIME_2FA_EXPIRING = 120000;
 const TIMEOUT_OPENER_HEALTHY = 120000;
 const TIMEOUT_UNHEALTHY_REMINDER = 4 * 60 * 60 * 1000;
 
-function openDoor(door) {
+function openDoor(opener, door) {
   try {
+    const secret = Buffer.from(opener['secret'], 'hex');
     const client = new net.Socket();
-    client.connect(DOOR_PORT, DOOR_HOST);
+    client.connect(parseInt(opener['port']), opener['host']);
     return new Promise((resolve, reject) => {
       let buffer = Buffer.alloc(0);
       client.on('data', (data) => {
@@ -46,7 +44,7 @@ function openDoor(door) {
           const response = Buffer.alloc(5);
           response.writeUInt8(door);
           buffer.copy(response, 1, 0, 4);
-          const hmac = crypto.createHmac('sha256', DOOR_SECRET);
+          const hmac = crypto.createHmac('sha256', secret);
           hmac.update(response);
           const payload = Buffer.concat([response, hmac.digest()]);
           client.write(payload);
@@ -120,6 +118,12 @@ app.get('/open', async (req, res) => {
     return;
   }
 
+  const opener = cfg.opener.find((v) => v.id == door.opener);
+  if (!opener) {
+    res.status(401).send({ err: 'no opener assigned' });
+    return;
+  } 
+
   rfiduid = rfiduid.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (rfiduid.length === 0) {
     res.status(400).send({ err: 'no uid' });
@@ -144,7 +148,7 @@ app.get('/open', async (req, res) => {
   if (recentAuthentications.has(slackUid) && recentAuthentications.get(slackUid) > (Date.now() - TIME_2FA_NO_REAUTH_NEEDED)) {
     // skip second factor
     res.status(200).send({ ok: true });
-    openDoor(door.relais).then(() => message.sendConfirmation(slackUid, door)).catch(() => console.error);
+    openDoor(opener, door.relais).then(() => message.sendConfirmation(slackUid, door)).catch(() => console.error);
   } else {
     // use slack as second factor
     await expireMessage(slackUid, door);
@@ -191,13 +195,19 @@ slackApp.post('/interactive-message', (req, res) => {
     return;
   }
 
+  const opener = cfg.opener.find((v) => v.id == door.opener);
+  if (!opener) {
+    res.status(401).send({ err: 'no opener assigned' });
+    return;
+  } 
+
   if (actionType === 'open') {
     if (data.time < Date.now() - TIME_2FA_EXPIRING) {
       res.send({ text: `Sorry. Die Zeit für diesen Öffnungsversuch ist bereits abgelaufen. Bitte versuche es erneut` });
       return;
     }
     recentAuthentications.set(user.id, Date.now());
-    openDoor(door.relais)
+    openDoor(opener, door.relais)
       .then(() => {
         lastMessages.set(user.id, null);
         res.send({ text: `:white_check_mark: Du hast die Tür *${door.name}* geöffnet` });
@@ -220,30 +230,50 @@ slackApp.post('/interactive-message', (req, res) => {
 /**
  * Endpoint for assessing the health status of the opener device
  */
-let lastOpenerContact = Date.now();
-let lastUnhealthyMessage = 0;
+let lastOpenerContacts = {};
+let lastUnhealthyMessages = {};
+for (let opener of cfg.opener) {
+  lastOpenerContacts[opener.id] = Date.now();
+  lastUnhealthyMessages[opener.id] = 0;
+}
 app.get('/opener-alive', (req, res) => {
-    lastOpenerContact = Date.now();
-    res.status(200).send({ ok: true });
-    if (lastUnhealthyMessage > 0) {
-        message.sendMessage(
-            SLACK_REPORT_CHANNEL,
-            'Opener ist wieder da! :tada:'
-        );
-        lastUnhealthyMessage = 0;
+  if (typeof req.query.id === "undefined") {
+    const opener = cfg.opener.find((v) => v.host == req.ip);
+    if (!opener) {
+      res.status(404).send({ err: 'opener match not found' });
+      return;
     }
+  } else {
+    const opener = cfg.opener.find((v) => v.id == req.query.id);
+    if (!opener) {
+      res.status(404).send({ err: 'opener not found' });
+      return;
+    }
+  }
+
+  lastOpenerContacts[opener.id] = Date.now();
+  res.status(200).send({ ok: true });
+  if (lastUnhealthyMessages[opener.id] > 0) {
+    message.sendMessage(
+      SLACK_REPORT_CHANNEL,
+      `Opener *${opener.id}* ist wieder da! :tada:`
+    );
+    lastUnhealthyMessages[opener.id] = 0;
+  }
 });
 setInterval(() => {
-    const lastContact = Date.now() - lastOpenerContact;
-    const lastMessage = Date.now() - lastUnhealthyMessage;
-    if (lastUnhealthyMessage === 0 && lastContact > TIMEOUT_OPENER_HEALTHY
-        || lastUnhealthyMessage > 0 && lastMessage > TIMEOUT_UNHEALTHY_REMINDER) {
-        message.sendMessage(
-            SLACK_REPORT_CHANNEL,
-            `Opener hat sich seit ${Math.floor(lastContact/1000)}s nicht mehr gemeldet.`
-        );
-        lastUnhealthyMessage = Date.now();
+  for (let opener of cfg.opener) {
+    const lastContact = Date.now() - lastOpenerContacts[opener.id];
+    const lastMessage = Date.now() - lastUnhealthyMessages[opener.id];
+    if (lastUnhealthyMessages[opener.id] === 0 && lastContact > TIMEOUT_OPENER_HEALTHY
+      || lastUnhealthyMessages[opener.id] > 0 && lastMessage > TIMEOUT_UNHEALTHY_REMINDER) {
+      message.sendMessage(
+        SLACK_REPORT_CHANNEL,
+        `Opener *${opener.id}* hat sich seit ${Math.floor(lastContact/1000)}s nicht mehr gemeldet.`
+      );
+      lastUnhealthyMessages[opener.id] = Date.now();
     }
+  }
 }, TIMEOUT_OPENER_HEALTHY);
 
 app.listen(process.env.PORT, process.env.INTERNAL_HOST, () => {
