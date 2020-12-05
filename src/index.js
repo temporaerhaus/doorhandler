@@ -237,16 +237,19 @@ for (let opener of cfg.opener) {
   lastUnhealthyMessages[opener.id] = 0;
 }
 app.get('/opener-alive', (req, res) => {
+  let opener;
   if (typeof req.query.id === "undefined") {
-    const opener = cfg.opener.find((v) => v.host == req.ip);
+    opener = cfg.opener.find((v) => v.host == req.ip);
     if (!opener) {
       res.status(404).send({ err: 'opener match not found' });
+      console.error('something tried to send an alive ping, ip: ' + req.ip);
       return;
     }
   } else {
-    const opener = cfg.opener.find((v) => v.id == req.query.id);
+    opener = cfg.opener.find((v) => v.id == req.query.id);
     if (!opener) {
       res.status(404).send({ err: 'opener not found' });
+      console.error('something tried to send an alive ping, query: ' + req.query.id);
       return;
     }
   }
